@@ -1,6 +1,10 @@
 import google.generativeai as genai
 import os
-from flask import Flask, request, jsonify, send_file
+import tempfile
+from flask import Flask, request, jsonify
+import requests
+from bs4 import BeautifulSoup
+import urllib3
 
 # Configuración de Flask
 app = Flask(__name__)
@@ -16,10 +20,20 @@ def get_power_outage():
         return jsonify({"error": "Zona es un parámetro obligatorio"}), 400
 
     try:
-        # Enviar un PDF a Gemini
-        # Llamada a la función con la URL proporcionada
-        scrapear_y_descargar_pdf('https://www.eeq.com.ec/cortes-de-servicio1')
-        file = genai.upload_file(path="./PDFs/VSD.pdf", display_name="Corte Luz UIO")
+        # Descargar el PDF en memoria
+        pdf_content, error = scrapear_y_obtener_pdf(
+            "https://www.eeq.com.ec/cortes-de-servicio1"
+        )
+        if error:
+            return jsonify({"error": error}), 400
+
+        # Escribir el PDF en un archivo temporal
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_pdf:
+            temp_pdf.write(pdf_content)
+            temp_pdf_path = temp_pdf.name
+
+        # Subir el archivo PDF a Gemini
+        file = genai.upload_file(path=temp_pdf_path, display_name="Corte Luz UIO")
 
         # Usar modelo generativo
         model = genai.GenerativeModel(model_name="models/gemini-1.5-flash")
@@ -38,60 +52,44 @@ def get_power_outage():
         response_text = response.text
         json_data = response_text.split("```json")[1].split("```")[0].strip()
 
+        # Eliminar el archivo temporal
+        os.remove(temp_pdf_path)
+
         return jsonify({"data": json_data})
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-    
 
-@app.route("/privacy", methods=["GET"])
-def privacy():
-    privacy_html = "./privacy.html"
-    return send_file(privacy_html, mimetype="text/html")
 
-    
+def scrapear_y_obtener_pdf(url):
+    # Deshabilitar advertencias SSL
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-import requests
-from bs4 import BeautifulSoup
-
-def scrapear_y_descargar_pdf(url):
     # Realiza la solicitud HTTP a la página
-    response = requests.get(url)
+    response = requests.get(url, verify=False)
 
     # Verifica que la solicitud haya sido exitosa (código 200)
     if response.status_code == 200:
         # Parsear el contenido HTML de la página
-        soup = BeautifulSoup(response.text, 'html.parser')
+        soup = BeautifulSoup(response.text, "html.parser")
 
         # Buscar el primer botón <a> con la clase "ver_noticia_home"
-        button = soup.find('a', class_='ver_noticia_home')
+        button = soup.find("a", class_="ver_noticia_home")
 
         if button:
-            # Obtener el enlace (href) y el texto del botón
-            link = button.get('href')
-            text = button.text.strip()
+            # Obtener el enlace (href)
+            link = button.get("href")
 
-            print(f'Enlace: {link}')
-            print(f'Texto del botón: {text}')
-            
-            # Descargar el contenido de la página en el directorio actual PDFs
-            response = requests.get(link)
-            
-            # Crear el directorio 'PDFs' si no existe
-            import os
-            os.makedirs('PDFs', exist_ok=True)
-            
-            with open('PDFs/VSD.pdf', 'wb') as f:
-                f.write(response.content)
-            
-            print('PDF descargado exitosamente.')
-            
+            # Descargar el contenido del enlace en memoria
+            response = requests.get(link, verify=False)
+            if response.status_code == 200:
+                return response.content, None
+            else:
+                return None, f"Error al descargar el PDF: {response.status_code}"
         else:
-            print('No se encontró el botón con la clase "ver_noticia_home".')
-
+            return None, 'No se encontró el botón con la clase "ver_noticia_home".'
     else:
-        print(f'Error al acceder a la página: {response.status_code}')
-
+        return None, f"Error al acceder a la página: {response.status_code}"
 
 
 # Punto de entrada
