@@ -58,8 +58,11 @@ RESPUESTA
 Si tienes ideas o experiencia en scraping, optimización de APIs, o nuevos enfoques para este tipo de proyectos, ¡anímate a contribuir!
 
 Para colaborar:
+
 	1.	Realiza un fork del proyecto.
+ 
 	2.	Crea una rama con tu funcionalidad o mejora
+ 
 	3.	Realiza un pull request (PR).
 
 
