@@ -18,12 +18,14 @@ genai.configure(api_key="AIzaSyCJ1biYiA_IErtPWpUXMX7pPNeFWj3h_RM")
 @app.route("/api", methods=["GET"])
 def get_power_outage():
     zona = request.args.get("zona")
+    print(f"Zona: {zona}")
 
     data = informacion_de_zona(zona)
 
     jsonfinal = {
         "zona": zona,
-        "horarios": data
+        "horarios": data,
+        "dia" : datetime.date.today().day
     }
 
     return jsonify({"data": jsonfinal})
@@ -62,7 +64,6 @@ def scrapear_y_obtener_todos_los_pdfs(url):
 
 
 def informacion_de_zona(zona):
-    print(f"Zona: {zona}")
     pdfs, error = scrapear_y_obtener_todos_los_pdfs('https://www.eeq.com.ec/cortes-de-servicio1')
     if error:
         print(f"Error: {error}")
@@ -76,8 +77,6 @@ def informacion_de_zona(zona):
 
         try:
             reader = PdfReader(temp_pdf_path)
-            print(f"Número de páginas en PDF #{index + 1}: {len(reader.pages)}")
-
             for i, page in enumerate(reader.pages):
                 text = page.extract_text()
                 text = text.replace("á", "a").replace("é", "e").replace("í", "i").replace("ó", "o").replace("ú", "u")
@@ -87,10 +86,8 @@ def informacion_de_zona(zona):
 
 
                 zona = zona.lower()
-                print(f"{text}")
 
                 if zona in text.lower():
-                    print(f"Zona encontrada en página {i + 1} del PDF #{index + 1}")
                     # Procesar horarios y fecha
                     index_fecha = text.find("2024")
                     index_horarios = text.find("/")
@@ -103,13 +100,11 @@ def informacion_de_zona(zona):
 
                         dia = obtener_primer_entero(fecha_separada)
 
-                        print(f"Dia actual: {dia}")
 
                         if dia == datetime.date.today().day:
                             os.remove(temp_pdf_path)
                             return inicio,fin
                         
-                        print(f"Dia actual: {dia}")
 
                         dia = obtener_segundo_entero(fecha_separada)
                         if dia == datetime.date.today().day:
@@ -137,7 +132,6 @@ def obtener_segundo_entero(lista):
     for elemento in lista:
         try:
             elementos.append(int(elemento))
-            print(elementos)
         except ValueError:
             continue
     if len(elementos) > 1:
