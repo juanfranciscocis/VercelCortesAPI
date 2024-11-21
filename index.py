@@ -6,6 +6,7 @@ from pypdf import PdfReader
 import tempfile
 import requests
 from bs4 import BeautifulSoup
+import datetime
 
 # Configuración de Flask
 app = Flask(__name__)
@@ -101,13 +102,30 @@ def informacion_de_zona(zona):
         text = text.replace("Ú", "U")
         text = text.replace("Ñ", "N")
 
+        zona = zona.replace("á", "a")
+        zona = zona.replace("é", "e")
+        zona = zona.replace("í", "i")
+        zona = zona.replace("ó", "o")
+        zona = zona.replace("ú", "u")
+        zona = zona.replace("ñ", "n")
+        zona = zona.replace("Á", "A")
+        zona = zona.replace("É", "E")
+        zona = zona.replace("Í", "I")
+        zona = zona.replace("Ó", "O")
+        zona = zona.replace("Ú", "U")
+        zona = zona.replace("Ñ", "N")
+
 
         print(f"Página {page}: {text}")
 
+        print(f"Zona: {zona}")
+        print(f"Texto: {text}")
 
         if zona.upper() in text.upper():
-            # Eliminar el archivo temporal
-            os.remove(temp_pdf_path)
+            print("Encontrada")
+            print(f"Página Encontrada {page}: {text}")
+            print(f"Zona encontrada: {zona}")
+
             # Buscar un / en el texto y extraer el hoario inicial y final 08:00 -12:00 / 4:00 - 8:00
             index = text.find("/")
             print(f"Index: {index}")
@@ -115,12 +133,39 @@ def informacion_de_zona(zona):
             fin = text[index+2:index+15]
             print(f"Inicio: {inicio}")
             print(f"Fin: {fin}")
-            return inicio, fin
+
+            # Buscar en el texto 2024
+            index = text.find("2024")
+            print(f"Index: {index}")
+            # Obtener la fecha : Viernes 24 de diciembre de 2024
+            fecha = text[index-40:index+10]
+            print(f"Fecha: {fecha}")
+            # separa la fecha usando el espacio
+            fecha = fecha.split(" ")
+            print(f"Fecha separada: {fecha}")
+
+            dia = obtener_primer_entero(fecha)
+            print(f"Dia: {dia}")
+
+            #Obtener el dia actual
+            dia_actual = datetime.date.today().day
+            print(f"Dia actual: {dia_actual}")
+
+            if dia_actual <= dia: 
+                return inicio, fin
     
     os.remove(temp_pdf_path)
     return "Zona no encontrada"
 
-
+def obtener_primer_entero(lista):
+    for elemento in lista:
+        # Intentar convertir el elemento a entero
+        try:
+            return int(elemento)
+        except ValueError:
+            # Si no es posible convertirlo, continuar con el siguiente
+            continue
+    return None  # Retorna None si no se encuentra ningún número
 # Punto de entrada
 if __name__ == "__main__":
     app.run(debug=True)
