@@ -32,7 +32,7 @@ def get_power_outage():
     
 
 
-def scrapear_y_obtener_pdf(url):
+def scrapear_y_obtener_todos_los_pdfs(url):
     # Deshabilitar advertencias SSL
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -44,128 +44,106 @@ def scrapear_y_obtener_pdf(url):
         # Parsear el contenido HTML de la página
         soup = BeautifulSoup(response.text, "html.parser")
 
-        # Buscar el primer botón <a> con la clase "ver_noticia_home"
-        button = soup.find("a", class_="ver_noticia_home")
+        # Buscar todos los botones <a> con la clase "ver_noticia_home"
+        buttons = soup.find_all("a", class_="ver_noticia_home")
+        pdfs = []
 
-        if button:
-            # Obtener el enlace (href)
+        # Descargar los contenidos de cada enlace
+        for button in buttons:
             link = button.get("href")
-
-            # Descargar el contenido del enlace
             response = requests.get(link, verify=False)
             if response.status_code == 200:
-                return response.content, None
+                pdfs.append(response.content)
             else:
-                return None, f"Error al descargar el PDF: {response.status_code}"
-        else:
-            return None, 'No se encontró el botón con la clase "ver_noticia_home".'
+                print(f"Error al descargar el PDF en {link}: {response.status_code}")
+        return pdfs, None
     else:
         return None, f"Error al acceder a la página: {response.status_code}"
 
+
 def informacion_de_zona(zona):
     print(f"Zona: {zona}")
-    # Crear un archivo temporal para el PDF descargado
-    pdf_content, error = scrapear_y_obtener_pdf('https://www.eeq.com.ec/cortes-de-servicio1')
+    pdfs, error = scrapear_y_obtener_todos_los_pdfs('https://www.eeq.com.ec/cortes-de-servicio1')
     if error:
         print(f"Error: {error}")
         return
 
-    # Guardar el contenido PDF en un archivo temporal
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_pdf:
-        temp_pdf.write(pdf_content)
-        temp_pdf_path = temp_pdf.name
+    for index, pdf_content in enumerate(pdfs):
+        print(f"Procesando PDF #{index + 1}...")
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_pdf:
+            temp_pdf.write(pdf_content)
+            temp_pdf_path = temp_pdf.name
 
-    # Leer el PDF usando PdfReader
-    reader = PdfReader(temp_pdf_path)
+        try:
+            reader = PdfReader(temp_pdf_path)
+            print(f"Número de páginas en PDF #{index + 1}: {len(reader.pages)}")
 
-    # Imprimir el número de páginas del PDF
-    print(f"Número de páginas: {len(reader.pages)}")
-
-
-
-    # Obtener el contenido pagina por pagina hasta encontrar la zona
-    for i in range(0,len(reader.pages)):
-        page = reader.pages[i]
-        text = page.extract_text()
-
-        # Reemplazar los caracteres especiales
-        text = text.replace("á", "a")
-        text = text.replace("é", "e")
-        text = text.replace("í", "i")
-        text = text.replace("ó", "o")
-        text = text.replace("ú", "u")
-        text = text.replace("ñ", "n")
-        text = text.replace("Á", "A")
-        text = text.replace("É", "E")
-        text = text.replace("Í", "I")
-        text = text.replace("Ó", "O")
-        text = text.replace("Ú", "U")
-        text = text.replace("Ñ", "N")
-
-        zona = zona.replace("á", "a")
-        zona = zona.replace("é", "e")
-        zona = zona.replace("í", "i")
-        zona = zona.replace("ó", "o")
-        zona = zona.replace("ú", "u")
-        zona = zona.replace("ñ", "n")
-        zona = zona.replace("Á", "A")
-        zona = zona.replace("É", "E")
-        zona = zona.replace("Í", "I")
-        zona = zona.replace("Ó", "O")
-        zona = zona.replace("Ú", "U")
-        zona = zona.replace("Ñ", "N")
+            for i, page in enumerate(reader.pages):
+                text = page.extract_text()
+                text = text.replace("á", "a").replace("é", "e").replace("í", "i").replace("ó", "o").replace("ú", "u")
+                text = text.replace("Á", "A").replace("É", "E").replace("Í", "I").replace("Ó", "O").replace("Ú", "U")
+                text = text.replace("ñ", "n")
+                text = text.replace("\n", " ")
 
 
-        print(f"Página {page}: {text}")
+                zona = zona.lower()
+                print(f"{text}")
 
-        print(f"Zona: {zona}")
-        print(f"Texto: {text}")
+                if zona in text.lower():
+                    print(f"Zona encontrada en página {i + 1} del PDF #{index + 1}")
+                    # Procesar horarios y fecha
+                    index_fecha = text.find("2024")
+                    index_horarios = text.find("/")
+                    if index_fecha != -1 and index_horarios != -1:
+                        inicio = text[index_horarios - 13:index_horarios - 1].strip()
+                        fin = text[index_horarios + 2:index_horarios + 15].strip()
+                        fecha = text[index_fecha - 40:index_fecha + 10].strip()
+                        fecha_separada = fecha.split(" ")
+                        
 
-        if zona.upper() in text.upper():
-            print("Encontrada")
-            print(f"Página Encontrada {page}: {text}")
-            print(f"Zona encontrada: {zona}")
+                        dia = obtener_primer_entero(fecha_separada)
 
-            # Buscar un / en el texto y extraer el hoario inicial y final 08:00 -12:00 / 4:00 - 8:00
-            index = text.find("/")
-            print(f"Index: {index}")
-            inicio = text[index-13:index-1]
-            fin = text[index+2:index+15]
-            print(f"Inicio: {inicio}")
-            print(f"Fin: {fin}")
+                        print(f"Dia actual: {dia}")
 
-            # Buscar en el texto 2024
-            index = text.find("2024")
-            print(f"Index: {index}")
-            # Obtener la fecha : Viernes 24 de diciembre de 2024
-            fecha = text[index-40:index+10]
-            print(f"Fecha: {fecha}")
-            # separa la fecha usando el espacio
-            fecha = fecha.split(" ")
-            print(f"Fecha separada: {fecha}")
+                        if dia == datetime.date.today().day:
+                            os.remove(temp_pdf_path)
+                            return {"inicio": inicio, "fin": fin, "fecha": fecha}
+                        
+                        print(f"Dia actual: {dia}")
 
-            dia = obtener_primer_entero(fecha)
-            print(f"Dia: {dia}")
+                        dia = obtener_segundo_entero(fecha_separada)
+                        if dia == datetime.date.today().day:
+                            os.remove(temp_pdf_path)
+                            return {"inicio": inicio, "fin": fin, "fecha": fecha}
 
-            #Obtener el dia actual
-            dia_actual = datetime.date.today().day
-            print(f"Dia actual: {dia_actual}")
+            os.remove(temp_pdf_path)
+        except Exception as e:
+            os.remove(temp_pdf_path)
+            print(f"Error procesando el PDF #{index + 1}: {e}")
 
-            if dia_actual <= dia: 
-                return inicio, fin
-    
-    os.remove(temp_pdf_path)
     return "Zona no encontrada"
+
 
 def obtener_primer_entero(lista):
     for elemento in lista:
-        # Intentar convertir el elemento a entero
         try:
             return int(elemento)
         except ValueError:
-            # Si no es posible convertirlo, continuar con el siguiente
             continue
-    return None  # Retorna None si no se encuentra ningún número
+        return None
+
+def obtener_segundo_entero(lista):
+    elementos = []
+    for elemento in lista:
+        try:
+            elementos.append(int(elemento))
+            print(elementos)
+        except ValueError:
+            continue
+    if len(elementos) > 1:
+        return elementos[1]
+    else:
+        return None
 # Punto de entrada
 if __name__ == "__main__":
     app.run(debug=True)
