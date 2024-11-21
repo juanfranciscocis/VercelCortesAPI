@@ -107,14 +107,14 @@ def informacion_de_zona(zona):
 
                         if dia == datetime.date.today().day:
                             os.remove(temp_pdf_path)
-                            return {"inicio": inicio, "fin": fin, "fecha": fecha}
+                            return inicio,fin
                         
                         print(f"Dia actual: {dia}")
 
                         dia = obtener_segundo_entero(fecha_separada)
                         if dia == datetime.date.today().day:
                             os.remove(temp_pdf_path)
-                            return {"inicio": inicio, "fin": fin, "fecha": fecha}
+                            return inicio,fin
 
             os.remove(temp_pdf_path)
         except Exception as e:
