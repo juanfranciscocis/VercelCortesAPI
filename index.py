@@ -84,8 +84,11 @@ def informacion_de_zona(zona):
                 text = text.replace("ñ", "n")
                 text = text.replace("\n", " ")
 
-
                 zona = zona.lower()
+                zona = zona.replace("á", "a").replace("é", "e").replace("í", "i").replace("ó", "o").replace("ú", "u")
+                zona = zona.replace("Á", "A").replace("É", "E").replace("Í", "I").replace("Ó", "O").replace("Ú", "U")
+                zona = zona.replace("ñ", "n")
+                zona = zona.replace("\n", " ")
 
                 if zona in text.lower():
                     # Procesar horarios y fecha
