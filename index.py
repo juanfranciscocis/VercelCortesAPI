@@ -147,7 +147,7 @@ def informacion_de_zona(zona,dia_ec):
             os.remove(temp_pdf_path)
             print(f"Error procesando el PDF #{index + 1}: {e}")
 
-    return "Zona no encontrada"
+    return "Zona no encontrada o no se encuentra la fecha pedida"
 
 
 def obtener_primer_entero(lista):
