@@ -118,8 +118,6 @@ def informacion_de_zona(zona,dia_ec):
                 zona = zona.replace("ñ", "n")
                 zona = zona.replace("\n", " ")
 
-                print(f"Texto: {text}")
-
                 if zona in text.lower():
                     # Procesar horarios y fecha
                     index_fecha = text.find("2024")
@@ -207,7 +205,7 @@ def get_power_outage_specific_date():
     jsonfinal = {
         "zona": zona,
         "horarios": data,
-        "fecha": [dia, mes_esp, ano]
+        "fecha": [int(dia), mes_esp, ano]
     }
     return jsonify({"data": jsonfinal})
 
