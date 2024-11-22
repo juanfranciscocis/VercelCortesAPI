@@ -45,7 +45,32 @@ RESPUESTA
 {"data":
   {
     "horarios":["0:00 - 04:00","12:00 - 16:00"],
-    "zona":"cumbaya"
+    "zona":"cumbaya",
+    "fecha":[21,"noviembre",2024]
+  }
+}
+```
+
+**GET** `/api/specific_date`
+
+#### Parámetros
+
+| Parámetro | Tipo   | Descripción                                  | Obligatorio |
+|-----------|--------|----------------------------------------------|-------------|
+| `zona`    | String | Nombre de la zona para consultar los cortes. | Sí          |
+| `dia`     | String | Día del mes para consultar los cortes.       | Sí          |
+
+#### Ejemplo de Uso
+ 
+```curl "https://vercel-cortes-api.vercel.app/api/specific_date?zona=cumbaya&dia=21" ```
+
+RESPUESTA
+```
+{"data":
+  {
+    "horarios":["0:00 - 04:00","12:00 - 16:00"],
+    "zona":"cumbaya",
+    "fecha":[21,"noviembre",2024]
   }
 }
 ```

@@ -6,3 +6,4 @@ protobuf~=5.28.3
 urllib3
 pypdf
 fuzzywuzzy
+pytz

@@ -7,6 +7,9 @@ import tempfile
 import requests
 from bs4 import BeautifulSoup
 import datetime
+from datetime import datetime
+import pytz
+
 
 # Configuración de Flask
 app = Flask(__name__)
@@ -20,12 +23,37 @@ def get_power_outage():
     zona = request.args.get("zona")
     print(f"Zona: {zona}")
 
-    data = informacion_de_zona(zona)
+    # Diccionario con los nombres de los meses en español
+    meses_espanol = {
+        1: "enero", 2: "febrero", 3: "marzo", 4: "abril",
+        5: "mayo", 6: "junio", 7: "julio", 8: "agosto",
+        9: "septiembre", 10: "octubre", 11: "noviembre", 12: "diciembre"
+    }
+
+    # Zona horaria de Ecuador
+    ecuador_tz = pytz.timezone('America/Guayaquil')
+
+    # Obtener la fecha y hora actual en Ecuador
+    ecuador_time = datetime.now(ecuador_tz)
+
+
+
+    # Formatear la fecha y hora
+    dia = int(ecuador_time.strftime("%d"))
+    mes = int(ecuador_time.strftime("%m"))
+    mes_esp = meses_espanol[mes]
+    ano = int(ecuador_time.strftime("%Y"))
+
+    print("Fecha y hora en Ecuador:", dia)
+
+
+
+    data = informacion_de_zona(zona, dia)
 
     jsonfinal = {
         "zona": zona,
         "horarios": data,
-        "dia" : datetime.date.today().day
+        "fecha": [dia, mes_esp, ano]
     }
 
     return jsonify({"data": jsonfinal})
@@ -63,7 +91,7 @@ def scrapear_y_obtener_todos_los_pdfs(url):
         return None, f"Error al acceder a la página: {response.status_code}"
 
 
-def informacion_de_zona(zona):
+def informacion_de_zona(zona,dia_ec):
     pdfs, error = scrapear_y_obtener_todos_los_pdfs('https://www.eeq.com.ec/cortes-de-servicio1')
     if error:
         print(f"Error: {error}")
@@ -90,6 +118,8 @@ def informacion_de_zona(zona):
                 zona = zona.replace("ñ", "n")
                 zona = zona.replace("\n", " ")
 
+                print(f"Texto: {text}")
+
                 if zona in text.lower():
                     # Procesar horarios y fecha
                     index_fecha = text.find("2024")
@@ -104,13 +134,13 @@ def informacion_de_zona(zona):
                         dia = obtener_primer_entero(fecha_separada)
 
 
-                        if dia == datetime.date.today().day:
+                        if dia == dia_ec:
                             os.remove(temp_pdf_path)
                             return inicio,fin
                         
 
                         dia = obtener_segundo_entero(fecha_separada)
-                        if dia == datetime.date.today().day:
+                        if dia == dia_ec:
                             os.remove(temp_pdf_path)
                             return inicio,fin
 
@@ -141,6 +171,48 @@ def obtener_segundo_entero(lista):
         return elementos[1]
     else:
         return None
+    
+
+
+@app.route("/api/specific_date", methods=["GET"])
+def get_power_outage_specific_date():
+    zona = request.args.get("zona")
+    dia = request.args.get("dia")
+    print(f"Zona: {zona}")
+    print(f"Dia: {dia}")
+
+
+        # Diccionario con los nombres de los meses en español
+    meses_espanol = {
+        1: "enero", 2: "febrero", 3: "marzo", 4: "abril",
+        5: "mayo", 6: "junio", 7: "julio", 8: "agosto",
+        9: "septiembre", 10: "octubre", 11: "noviembre", 12: "diciembre"
+    }
+
+    # Zona horaria de Ecuador
+    ecuador_tz = pytz.timezone('America/Guayaquil')
+
+    # Obtener la fecha y hora actual en Ecuador
+    ecuador_time = datetime.now(ecuador_tz)
+
+
+    mes = int(ecuador_time.strftime("%m"))
+    mes_esp = meses_espanol[mes]
+    ano = int(ecuador_time.strftime("%Y"))
+
+
+    
+    data = informacion_de_zona(zona, int(dia))
+
+    jsonfinal = {
+        "zona": zona,
+        "horarios": data,
+        "fecha": [dia, mes_esp, ano]
+    }
+    return jsonify({"data": jsonfinal})
+
+
+
 # Punto de entrada
 if __name__ == "__main__":
     app.run(debug=True)
