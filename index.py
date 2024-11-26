@@ -130,18 +130,27 @@ def informacion_de_zona(zona,dia_ec):
                         
 
                         dia = obtener_primer_entero(fecha_separada)
-
-
+                        print("Primer dia:",dia)
                         if dia == dia_ec:
+                            os.remove(temp_pdf_path)
+                            return inicio,fin
+                    
+                        
+                        segundo_dia = obtener_segundo_entero(fecha_separada)
+                        print("Segundo dia:",segundo_dia)
+                        if segundo_dia == dia_ec:
+                            print("El PDF tiene ")
                             os.remove(temp_pdf_path)
                             return inicio,fin
                         
-
-                        dia = obtener_segundo_entero(fecha_separada)
-                        if dia == dia_ec:
+                        if dia < segundo_dia and dia < dia_ec and  dia_ec < segundo_dia:
+                            print("El PDF tiene rango de fechas")
                             os.remove(temp_pdf_path)
                             return inicio,fin
 
+
+                    
+            print("No se encontro la fecha en el PDF")
             os.remove(temp_pdf_path)
         except Exception as e:
             os.remove(temp_pdf_path)
