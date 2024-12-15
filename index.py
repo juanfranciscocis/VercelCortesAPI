@@ -9,7 +9,7 @@ from bs4 import BeautifulSoup
 import datetime
 from datetime import datetime
 import pytz
-
+import re
 
 # Configuración de Flask
 app = Flask(__name__)
@@ -111,6 +111,7 @@ def informacion_de_zona(zona,dia_ec):
                 text = text.replace("Á", "A").replace("É", "E").replace("Í", "I").replace("Ó", "O").replace("Ú", "U")
                 text = text.replace("ñ", "n")
                 text = text.replace("\n", " ")
+                print(text)
 
                 zona = zona.lower()
                 zona = zona.replace("á", "a").replace("é", "e").replace("í", "i").replace("ó", "o").replace("ú", "u")
@@ -121,12 +122,27 @@ def informacion_de_zona(zona,dia_ec):
                 if zona in text.lower():
                     # Procesar horarios y fecha
                     index_fecha = text.find("2024")
-                    index_horarios = text.find("/")
+                    print(index_fecha, "Found")
+                    index_horarios = text.find("-")
                     if index_fecha != -1 and index_horarios != -1:
-                        inicio = text[index_horarios - 13:index_horarios - 1].strip()
-                        fin = text[index_horarios + 2:index_horarios + 15].strip()
-                        fecha = text[index_fecha - 40:index_fecha + 10].strip()
-                        fecha_separada = fecha.split(" ")
+                        # Ajustar la extracción para obtener solo los fragmentos relevantes
+                        texto_horarios = text[index_horarios - 20:index_horarios + 20]
+                        texto_fecha = text[index_fecha - 46:index_fecha + 10].strip()
+
+                        # Usar regex para encontrar horarios en formato HH:MM
+                        horarios_encontrados = re.findall(r'\b\d{2}:\d{2}\b', texto_horarios)
+
+                        # Separar la fecha si es necesario
+                        fecha_separada = texto_fecha.split(" ")
+
+                        inicio = horarios_encontrados[0]
+                        fin = horarios_encontrados[1]
+
+                        # Imprimir resultados
+                        print(f"Horarios encontrados: {horarios_encontrados}")
+                        print(f"Fecha separada: {fecha_separada}")
+
+                        print(f"Fecha separada: {fecha_separada}")
                         
 
                         dia = obtener_primer_entero(fecha_separada)
@@ -143,8 +159,15 @@ def informacion_de_zona(zona,dia_ec):
                             os.remove(temp_pdf_path)
                             return inicio,fin
                         
+                        print(f"Dia: {dia}")
+                        print(f"Segundo dia: {segundo_dia}")
+
+
+
+                        
                         if dia < segundo_dia and dia < dia_ec and  dia_ec < segundo_dia:
                             print("El PDF tiene rango de fechas")
+                            print(f"Rango de fechas: {dia} y {segundo_dia}")
                             os.remove(temp_pdf_path)
                             return inicio,fin
 
@@ -184,7 +207,7 @@ def obtener_segundo_entero(lista):
 @app.route("/api/specific_date", methods=["GET"])
 def get_power_outage_specific_date():
     zona = request.args.get("zona")
-    dia = request.args.get("dia")
+    dia = int(request.args.get("dia"))
     print(f"Zona: {zona}")
     print(f"Dia: {dia}")
 
@@ -204,19 +227,35 @@ def get_power_outage_specific_date():
 
 
     mes = int(ecuador_time.strftime("%m"))
-    mes_esp = meses_espanol[mes]
-    ano = int(ecuador_time.strftime("%Y"))
-
-
     
-    data = informacion_de_zona(zona, int(dia))
+    # El dia es menor a 31 del mes actual y 
+    if int(ecuador_time.strftime("%d")) <= dia and int(ecuador_time.strftime("%d")) <= 31:
+        mes_esp = meses_espanol[mes]
+        ano = int(ecuador_time.strftime("%Y"))
 
-    jsonfinal = {
-        "zona": zona,
-        "horarios": data,
-        "fecha": [int(dia), mes_esp, ano]
-    }
-    return jsonify({"data": jsonfinal})
+
+        data = informacion_de_zona(zona, int(dia))
+
+        jsonfinal = {
+            "zona": zona,
+            "horarios": data,
+            "fecha": [int(dia), mes_esp, ano]
+        }
+        return jsonify({"data": jsonfinal})
+    else:
+        mes_esp = meses_espanol[mes+1]
+        ano = int(ecuador_time.strftime("%Y"))
+
+
+        data = informacion_de_zona(zona, int(dia))
+
+        jsonfinal = {
+            "zona": zona,
+            "horarios": data,
+            "fecha": [int(dia), mes_esp, ano]
+        }
+        return jsonify({"data": jsonfinal})
+
 
 
 
